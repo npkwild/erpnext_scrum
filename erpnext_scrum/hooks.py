@@ -30,7 +30,7 @@ app_license = "mit"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/erpnext_scrum/css/erpnext_scrum.css"
-web_include_js = "/assets/erpnext_scrum/js/login_extend.js"
+# web_include_js = "/assets/erpnext_scrum/js/login_extend.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "erpnext_scrum/public/scss/website"
