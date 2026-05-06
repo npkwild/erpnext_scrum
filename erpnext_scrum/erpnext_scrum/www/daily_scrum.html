@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Scrum</title>
+    
+    {% if dev_server %}
+    <script type="module" src="{{ dev_server }}/@vite/client"></script>
+    <script type="module" src="{{ dev_server }}/src/main.jsx"></script>
+    {% else %}
+    <!-- Production built assets injected here by Frappe hooks or manually -->
+    <script type="module" crossorigin src="/assets/erpnext_scrum/frontend/index.js"></script>
+    <link rel="stylesheet" href="/assets/erpnext_scrum/frontend/index.css">
+    {% endif %}
+    
+    <script>
+        window.csrf_token = "{{ frappe.session.csrf_token }}";
+    </script>
+</head>
+<body class="bg-[#1f1f1f]">
+    <div id="root"></div>
+</body>
+</html>

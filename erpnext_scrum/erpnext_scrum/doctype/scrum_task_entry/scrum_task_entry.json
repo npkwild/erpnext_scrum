@@ -1,0 +1,124 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-04 10:11:28.822661",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "task",
+  "task_title",
+  "project",
+  "task_type",
+  "dependencies",
+  "yesterday_task",
+  "yesterday_hours",
+  "timesheet_status",
+  "is_new_task",
+  "expected_hours"
+ ],
+ "fields": [
+  {
+   "allow_on_submit": 1,
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "task",
+   "fieldtype": "Link",
+   "label": "Task",
+   "options": "Task"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "task_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Task Title",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "task_type",
+   "fieldtype": "Link",
+   "label": "Task Type",
+   "options": "Task Type"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "dependencies",
+   "fieldtype": "Select",
+   "label": "Dependencies",
+   "options": "No\nYes"
+  },
+  {
+   "fieldname": "yesterday_task",
+   "fieldtype": "Data",
+   "label": "Yesterday Task",
+   "read_only": 1
+  },
+  {
+   "fieldname": "yesterday_hours",
+   "fieldtype": "Float",
+   "label": "Yesterday Hours",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "timesheet_status",
+   "fieldtype": "Select",
+   "label": "Timesheet Status",
+   "options": "Filled\nMissing\nOn Leave"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "is_new_task",
+   "fieldtype": "Check",
+   "label": "Is New Task"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "expected_hours",
+   "fieldtype": "Float",
+   "label": "Expected Hours"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-06 15:04:09.460967",
+ "modified_by": "Administrator",
+ "module": "ERPNext Scrum",
+ "name": "Scrum Task Entry",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

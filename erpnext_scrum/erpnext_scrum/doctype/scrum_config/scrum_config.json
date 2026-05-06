@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-04 10:11:29.127277",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "scrum_start_time",
+  "scrum_end_time",
+  "grace_period_minutes",
+  "eod_reminder_time",
+  "escalation_time",
+  "enabled_departments",
+  "cc_project_managers"
+ ],
+ "fields": [
+  {
+   "default": "09:30:00",
+   "fieldname": "scrum_start_time",
+   "fieldtype": "Time",
+   "label": "Scrum Start Time"
+  },
+  {
+   "default": "10:30:00",
+   "fieldname": "scrum_end_time",
+   "fieldtype": "Time",
+   "label": "Scrum End Time"
+  },
+  {
+   "default": "60",
+   "fieldname": "grace_period_minutes",
+   "fieldtype": "Int",
+   "label": "Grace Period (Minutes)"
+  },
+  {
+   "default": "17:00:00",
+   "fieldname": "eod_reminder_time",
+   "fieldtype": "Time",
+   "label": "EOD Reminder Time"
+  },
+  {
+   "default": "18:30:00",
+   "fieldname": "escalation_time",
+   "fieldtype": "Time",
+   "label": "Escalation Time"
+  },
+  {
+   "fieldname": "enabled_departments",
+   "fieldtype": "Table MultiSelect",
+   "label": "Enabled Departments",
+   "options": "Scrum Config Department"
+  },
+  {
+   "default": "1",
+   "fieldname": "cc_project_managers",
+   "fieldtype": "Check",
+   "label": "CC Project Managers"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-04 10:11:29.127277",
+ "modified_by": "Administrator",
+ "module": "ERPNext Scrum",
+ "name": "Scrum Config",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

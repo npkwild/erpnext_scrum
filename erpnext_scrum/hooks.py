@@ -30,7 +30,7 @@ app_license = "mit"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/erpnext_scrum/css/erpnext_scrum.css"
-# web_include_js = "/assets/erpnext_scrum/js/erpnext_scrum.js"
+web_include_js = "/assets/erpnext_scrum/js/login_extend.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "erpnext_scrum/public/scss/website"
@@ -43,7 +43,7 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Task" : "erpnext_scrum/public/js/task.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}

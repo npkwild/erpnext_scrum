@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-04 10:11:29.021595",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "date",
+  "scrum_master",
+  "team",
+  "status",
+  "scrum_open_time",
+  "scrum_close_time",
+  "tasks",
+  "notes",
+  "submission_time",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "default": "Today",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "scrum_master",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Scrum Master",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "Department"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nSubmitted\nClosed"
+  },
+  {
+   "fieldname": "scrum_open_time",
+   "fieldtype": "Time",
+   "label": "Scrum Open Time"
+  },
+  {
+   "fieldname": "scrum_close_time",
+   "fieldtype": "Time",
+   "label": "Scrum Close Time"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "tasks",
+   "fieldtype": "Table",
+   "label": "Tasks",
+   "options": "Scrum Task Entry"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "submission_time",
+   "fieldtype": "Datetime",
+   "label": "Submission Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Daily Scrum",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-04 10:11:29.021595",
+ "modified_by": "Administrator",
+ "module": "ERPNext Scrum",
+ "name": "Daily Scrum",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
