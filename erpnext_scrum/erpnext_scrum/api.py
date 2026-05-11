@@ -87,15 +87,21 @@ def get_scrum_data(date=None, department=None):
         leave_app = frappe.db.get_value("Leave Application", {
             "employee": emp.name, "docstatus": ["<", 2],
             "from_date": ("<=", date), "to_date": (">=", date)
-        }, ["status", "name"], as_dict=True)
+        }, ["status", "name", "leave_type"], as_dict=True)
         
         on_leave = False
+        is_wfh = False
         leave_info = None
         if leave_app:
-            on_leave = True
+            if leave_app.leave_type == "Work From Home":
+                is_wfh = True
+            else:
+                on_leave = True
+            
             leave_info = {
                 "status": leave_app.status,
-                "name": leave_app.name
+                "name": leave_app.name,
+                "leave_type": leave_app.leave_type
             }
         
         yesterday_task = None
@@ -131,6 +137,7 @@ def get_scrum_data(date=None, department=None):
             "image": emp.image,
             "user_id": emp.user_id,
             "on_leave": on_leave,
+            "is_wfh": is_wfh,
             "leave_info": leave_info,
             "prev_working_day": prev_date,
             "yesterday_task": yesterday_task,

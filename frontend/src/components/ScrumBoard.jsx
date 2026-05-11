@@ -236,11 +236,11 @@ export default function ScrumBoard({ onLogout }) {
   )
 
   const missingEmployeesData = data.employees.filter(e => 
-    !e.on_leave && (e.yesterday_hours === 0 || !filledEmployeesSet.has(e.employee))
+    !e.on_leave && (e.yesterday_hours <= 4 || !filledEmployeesSet.has(e.employee))
   )
 
   const missingTimesheetEmployees = data.employees.filter(e => 
-    !e.on_leave && e.yesterday_hours === 0
+    !e.on_leave && e.yesterday_hours <= 4
   )
 
 

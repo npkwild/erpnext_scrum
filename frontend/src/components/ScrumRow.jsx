@@ -77,9 +77,13 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
                     {emp.employee_name}
                   </div>
                   <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 truncate">{emp.designation || 'Team Member'}</div>
-                  {emp.on_leave && (
+                  {(emp.on_leave || emp.is_wfh) && (
                     <div className="mt-1.5 flex flex-col space-y-1">
-                      {emp.leave_info?.status === 'Approved' ? (
+                      {emp.is_wfh ? (
+                        <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg inline-flex items-center">
+                          <Clock className="w-2.5 h-2.5 mr-1" /> Work From Home
+                        </span>
+                      ) : emp.leave_info?.status === 'Approved' ? (
                         <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg inline-flex items-center">
                           <Check className="w-2.5 h-2.5 mr-1" /> Approved Leave
                         </span>
@@ -99,20 +103,16 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
           <td className="p-4 align-middle">
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                {emp.on_leave ? (
-                  <div className="px-3 py-1.5 text-sm text-gray-600 italic">No tasks during leave</div>
-                ) : (
-                  <TaskAutocomplete
-                    key={`${emp.employee}-${row.id}`}
-                    employee={emp.employee}
-                    initialValue={row.taskData?.task_title || ''}
-                    onSelect={(data) => updateTask(row.id, data)}
-                    readOnly={readOnly}
-                    placeholder="Search or type task..."
-                  />
-                )}
+                <TaskAutocomplete
+                  key={`${emp.employee}-${row.id}`}
+                  employee={emp.employee}
+                  initialValue={row.taskData?.task_title || ''}
+                  onSelect={(data) => updateTask(row.id, data)}
+                  readOnly={readOnly}
+                  placeholder="Search or type task..."
+                />
               </div>
-              {!emp.on_leave && !readOnly && (
+              {!readOnly && (
                 <div className="flex items-center space-x-1">
                     <button
                         onClick={() => onOpenModal({ rowId: row.id, initialSubject: row.taskData?.task_title || '' })}
@@ -170,38 +170,36 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
           {/* Timesheet — only first row */}
           {idx === 0 ? (
             <td className="p-4 align-top" rowSpan={tasks.length}>
-              {emp.on_leave ? (
-                <span className="text-gray-600 text-xs">—</span>
-              ) : (
-                <div className="flex items-center space-x-3">
-                    <div className="flex flex-col">
-                        <span className={`font-bold text-sm ${
-                            emp.yesterday_hours >= 5 ? 'text-green-500' : 'text-red-500'
-                        }`}>
-                            {emp.yesterday_hours.toFixed(1)} hrs
-                        </span>
-                        <span className="text-[9px] text-gray-600 uppercase tracking-tighter">Yesterday</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <button 
-                            onClick={onSendLeaveReminder}
-                            title="Remind to submit leave application"
-                            className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all border border-blue-200 shadow-sm"
-                        >
-                            <CalendarPlus className="w-4 h-4" />
-                        </button>
-                        {missingTs && (
-                            <button 
-                                onClick={onSendReminder}
-                                title="Send timesheet reminder email"
-                                className="p-2 text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-all border border-yellow-200 shadow-sm"
-                            >
-                                <Bell className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-                </div>
-              )}
+              <div className="flex items-center space-x-3">
+                  <div className="flex flex-col">
+                      <span className={`font-bold text-sm ${
+                          emp.yesterday_hours >= 5 ? 'text-green-500' : 'text-red-500'
+                      }`}>
+                          {emp.yesterday_hours.toFixed(1)} hrs
+                      </span>
+                      <span className="text-[9px] text-gray-600 uppercase tracking-tighter">Yesterday</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                      {!emp.on_leave && !emp.is_wfh && (
+                          <button 
+                              onClick={onSendLeaveReminder}
+                              title="Remind to submit leave application"
+                              className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all border border-blue-200 shadow-sm"
+                          >
+                              <CalendarPlus className="w-4 h-4" />
+                          </button>
+                      )}
+                      {emp.yesterday_hours <= 4 && (
+                          <button 
+                              onClick={onSendReminder}
+                              title="Send timesheet reminder email"
+                              className="p-2 text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-all border border-yellow-200 shadow-sm"
+                          >
+                              <Bell className="w-4 h-4" />
+                          </button>
+                      )}
+                  </div>
+              </div>
             </td>
           ) : null}
 
@@ -220,7 +218,7 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
 
           {/* Add row button — only on last row */}
           <td className="p-4 align-middle text-right w-24">
-            {idx === tasks.length - 1 && !emp.on_leave && !readOnly && (
+            {idx === tasks.length - 1 && !readOnly && (
               <button
                 onClick={addRow}
                 title="Add another task for this employee"
