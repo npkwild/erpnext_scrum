@@ -125,6 +125,7 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
                     initialValue={row.taskData?.task_title || ''}
                     onSelect={(data) => updateTask(row.id, data)}
                     readOnly={readOnly}
+                    projects={projects}
                     placeholder="Search or type task..."
                   />
                 )}

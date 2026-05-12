@@ -217,35 +217,46 @@ def save_scrum_entry(scrum_name, task_data):
     if scrum.docstatus == 1:
         frappe.throw("Cannot update a submitted scrum.")
 
-    # Find if row exists by name or employee
     found = False
     row_name = task_data.get("name")
     employee = task_data.get("employee")
     new_task = task_data.get("task")
+    new_title = task_data.get("task_title")
     
     saved_row_name = None
     old_task = None
     
+    # Try to find existing row
     for row in scrum.tasks:
-        if (row_name and row.name == row_name) or (not row_name and row.employee == employee):
-            old_task = row.task
-            row.task = new_task
-            row.task_title = task_data.get("task_title")
-            row.project = task_data.get("project")
-            row.task_type = task_data.get("task_type")
-            row.dependencies = task_data.get("dependencies")
-            row.expected_hours = task_data.get("expected_hours")
-            row.is_new_task = 1 if task_data.get("is_new_task") else 0
-            row.timesheet_status = task_data.get("timesheet_status")
-            saved_row_name = row.name
-            found = True
-            break
+        if row.employee == employee:
+            # Match by name if provided
+            if row_name and row.name == row_name:
+                found = True
+            # If name not provided, match by task ID if it exists and is same
+            elif not row_name and new_task and row.task == new_task:
+                found = True
+            # If still not found and no task ID, match by title (for typed tasks)
+            elif not row_name and not new_task and row.task_title == new_title:
+                found = True
+            
+            if found:
+                old_task = row.task
+                row.task = new_task
+                row.task_title = new_title
+                row.project = task_data.get("project")
+                row.task_type = task_data.get("task_type")
+                row.dependencies = task_data.get("dependencies")
+                row.expected_hours = task_data.get("expected_hours")
+                row.is_new_task = 1 if task_data.get("is_new_task") else 0
+                row.timesheet_status = task_data.get("timesheet_status")
+                saved_row_name = row.name
+                break
             
     if not found:
         new_row = scrum.append("tasks", {
             "employee": employee,
             "task": new_task,
-            "task_title": task_data.get("task_title"),
+            "task_title": new_title,
             "project": task_data.get("project"),
             "task_type": task_data.get("task_type"),
             "dependencies": task_data.get("dependencies"),
@@ -256,6 +267,7 @@ def save_scrum_entry(scrum_name, task_data):
         saved_row_name = new_row.name
         
     scrum.save(ignore_permissions=True)
+    frappe.db.commit()
     
     # Handle ToDo Assignments
     if employee and (old_task != new_task):
@@ -419,7 +431,7 @@ def send_timesheet_reminders(employees):
     return True
 
 @frappe.whitelist()
-def get_employee_tasks(employee, search=None, all_tasks=False):
+def get_employee_tasks(employee, search=None, all_tasks=False, project=None):
     """Get tasks. If all_tasks=True, searches all system tasks."""
     user_id = get_user_id_for_employee(employee)
     
@@ -427,9 +439,18 @@ def get_employee_tasks(employee, search=None, all_tasks=False):
     params = {}
 
     if not all_tasks and user_id:
-        conditions.append("(t._assign LIKE %(user_like)s OR t.owner = %(user_id)s)")
+        # Check assigned to, owner, or in assignments (tabToDo)
+        conditions.append("""(
+            t._assign LIKE %(user_like)s 
+            OR t.owner = %(user_id)s 
+            OR t.name IN (SELECT reference_name FROM `tabToDo` WHERE reference_type='Task' AND allocated_to=%(user_id)s AND status='Open')
+        )""")
         params["user_like"] = f"%{user_id}%"
         params["user_id"] = user_id
+
+    if project:
+        conditions.append("t.project = %(project)s")
+        params["project"] = project
 
     if search:
         conditions.append("(t.subject LIKE %(search)s OR t.name LIKE %(search)s)")
@@ -535,5 +556,6 @@ def add_task_to_scrum(task, date, employee, team, task_type=None):
             "timesheet_status": "Filled"
         })
         scrum.save(ignore_permissions=True)
+        frappe.db.commit()
         return True
     return False

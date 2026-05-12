@@ -5,7 +5,7 @@ import { Search, Plus, ExternalLink, CheckCircle, Loader2, Info, X, ChevronDown 
 const TASK_TYPES = ['Development', 'Customisation', 'Bug Fix', 'Learning', 'Follow Up']
 
 // Task Autocomplete: fetches assigned tasks, shows dropdown
-function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder = "Search or type task...", readOnly }) {
+function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder = "Search or type task...", readOnly, projects = [] }) {
   const [query, setQuery] = useState(initialValue)
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(false)
@@ -14,10 +14,11 @@ function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder =
   const debounceRef = useRef(null)
   const wrapperRef = useRef(null)
   const [isAllTasks, setIsAllTasks] = useState(false)
+  const [selectedProject, setSelectedProject] = useState('')
 
   useEffect(() => {
-    if (!readOnly) fetchTasks('', isAllTasks)
-  }, [employee, isAllTasks])
+    if (!readOnly) fetchTasks('', isAllTasks, selectedProject)
+  }, [employee, isAllTasks, selectedProject])
 
   useEffect(() => {
     if (initialValue && initialValue !== query) {
@@ -35,10 +36,12 @@ function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder =
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const fetchTasks = async (search, allTasks = false) => {
+  const fetchTasks = async (search, allTasks = false, project = '') => {
     setLoading(true)
     try {
-      const res = await get(`/api/method/erpnext_scrum.erpnext_scrum.api.get_employee_tasks?employee=${employee}&search=${search || ''}&all_tasks=${allTasks ? 1 : 0}`)
+      let url = `/api/method/erpnext_scrum.erpnext_scrum.api.get_employee_tasks?employee=${employee}&search=${search || ''}&all_tasks=${allTasks ? 1 : 0}`
+      if (project) url += `&project=${encodeURIComponent(project)}`
+      const res = await get(url)
       setTasks(res.message || [])
     } catch (e) {
       setTasks([])
@@ -52,8 +55,8 @@ function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder =
     setSelected(null)
     setOpen(true)
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => fetchTasks(val, isAllTasks), 300)
-    onSelect({ task: null, task_title: val, project: null, is_new_task: true })
+    debounceRef.current = setTimeout(() => fetchTasks(val, isAllTasks, selectedProject), 300)
+    onSelect({ task: null, task_title: val, project: selectedProject || null, is_new_task: true })
   }
 
   const handleSelect = (task) => {
@@ -99,12 +102,25 @@ function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder =
               <span className="text-[10px] uppercase font-bold text-[var(--text-secondary)] ml-1">
                   {isAllTasks ? 'Global Task Search' : 'Your Assigned Tasks'}
               </span>
-              <button 
-                onMouseDown={(e) => { e.preventDefault(); setIsAllTasks(!isAllTasks) }}
-                className="text-[10px] text-[var(--accent-color)] hover:text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100"
-              >
-                  {isAllTasks ? 'Show Assigned' : 'Search All'}
-              </button>
+              <div className="flex items-center gap-2">
+                  <select 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => setSelectedProject(e.target.value)}
+                    value={selectedProject}
+                    className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 font-bold text-[var(--text-primary)] focus:outline-none"
+                  >
+                    <option value="">All Projects</option>
+                    {projects.map(p => (
+                      <option key={p.name} value={p.name}>{p.project_name || p.name}</option>
+                    ))}
+                  </select>
+                  <button 
+                    onMouseDown={(e) => { e.preventDefault(); setIsAllTasks(!isAllTasks) }}
+                    className="text-[10px] text-[var(--accent-color)] hover:text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100"
+                  >
+                      {isAllTasks ? 'Global' : 'Assigned'}
+                  </button>
+              </div>
           </div>
           <div className="overflow-y-auto flex-1 custom-scrollbar">
               {!loading && tasks.length === 0 && (
