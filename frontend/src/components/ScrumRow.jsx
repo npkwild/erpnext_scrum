@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { TaskAutocomplete } from './TaskSelector'
-import { Plus, X, Bell, ExternalLink, Clock, CheckCircle, CalendarPlus, AlertCircle, Check } from 'lucide-react'
+import { Plus, X, Bell, ExternalLink, Clock, CheckCircle, CalendarPlus, AlertCircle, Check, Ban, RotateCcw } from 'lucide-react'
 
 const TASK_TYPES = ['Development', 'Customisation', 'Bug Fix', 'Learning', 'Follow Up']
 
-export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, onSendLeaveReminder, externalTask, readOnly, isSubmitted }) {
+export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, onSendLeaveReminder, projects, externalTask, readOnly, isSubmitted }) {
   const missingTs = !emp.on_leave && emp.yesterday_hours === 0
   const lowHours = !emp.on_leave && emp.yesterday_hours > 0 && emp.yesterday_hours < 5
   
@@ -103,17 +103,48 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
           <td className="p-4 align-middle">
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <TaskAutocomplete
-                  key={`${emp.employee}-${row.id}`}
-                  employee={emp.employee}
-                  initialValue={row.taskData?.task_title || ''}
-                  onSelect={(data) => updateTask(row.id, data)}
-                  readOnly={readOnly}
-                  placeholder="Search or type task..."
-                />
+                {row.taskData?.task_title === '[No Task Today]' ? (
+                    <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500 italic flex items-center justify-between group/notask">
+                        <div className="flex items-center">
+                            <Ban className="w-3 h-3 mr-2 text-slate-400" />
+                            No tasks planned for today
+                        </div>
+                        {!readOnly && (
+                            <button 
+                                onClick={() => updateTask(row.id, null)} 
+                                className="opacity-0 group-hover/notask:opacity-100 transition-opacity flex items-center text-blue-600 hover:text-blue-700 font-bold"
+                            >
+                                <RotateCcw className="w-3 h-3 mr-1" /> Change
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                  <TaskAutocomplete
+                    key={`${emp.employee}-${row.id}`}
+                    employee={emp.employee}
+                    initialValue={row.taskData?.task_title || ''}
+                    onSelect={(data) => updateTask(row.id, data)}
+                    readOnly={readOnly}
+                    placeholder="Search or type task..."
+                  />
+                )}
               </div>
               {!readOnly && (
                 <div className="flex items-center space-x-1">
+                    {row.taskData?.task_title !== '[No Task Today]' && (
+                        <button
+                            onClick={() => updateTask(row.id, { 
+                                task_title: '[No Task Today]', 
+                                project: null,
+                                is_new_task: false,
+                                task_type: 'Other'
+                            })}
+                            title="No Tasks Today (Mark as Completed)"
+                            className="p-1.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-transparent hover:border-amber-200"
+                        >
+                            <Ban className="w-4 h-4" />
+                        </button>
+                    )}
                     <button
                         onClick={() => onOpenModal({ rowId: row.id, initialSubject: row.taskData?.task_title || '' })}
                         title="Create new system task"

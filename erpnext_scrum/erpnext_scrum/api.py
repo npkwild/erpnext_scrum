@@ -169,13 +169,17 @@ def get_scrum_data(date=None, department=None):
     user = frappe.session.user
     scrum_master_name = frappe.db.get_value("Employee", {"user_id": user}, "employee_name") or user
 
+    # Fetch projects for default selection
+    projects = frappe.get_all("Project", filters={"status": ["!=", "Cancelled"]}, fields=["name", "project_name"], order_by="modified desc", limit=100)
+
     return {
         "employees": data,
         "scrum_master_name": scrum_master_name,
         "scrum_name": existing_scrum.name if existing_scrum else None,
         "scrum_status": existing_scrum.status if existing_scrum else None,
         "scrum_docstatus": existing_scrum.docstatus if existing_scrum else None,
-        "available_departments": available_departments
+        "available_departments": available_departments,
+        "projects": projects
     }
 
 @frappe.whitelist(allow_guest=True)

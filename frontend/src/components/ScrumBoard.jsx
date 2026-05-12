@@ -5,7 +5,7 @@ import ScrumRow from './ScrumRow'
 import { QuickCreateModal } from './TaskSelector'
 
 export default function ScrumBoard({ onLogout }) {
-  const [data, setData] = useState({ employees: [], scrum_master_name: '', available_departments: [] })
+  const [data, setData] = useState({ employees: [], scrum_master_name: '', available_departments: [], projects: [] })
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -236,7 +236,7 @@ export default function ScrumBoard({ onLogout }) {
   )
 
   const missingEmployeesData = data.employees.filter(e => 
-    !e.on_leave && (e.yesterday_hours <= 4 || !filledEmployeesSet.has(e.employee))
+    !e.on_leave && !filledEmployeesSet.has(e.employee)
   )
 
   const missingTimesheetEmployees = data.employees.filter(e => 
@@ -590,6 +590,7 @@ export default function ScrumBoard({ onLogout }) {
                     onOpenModal={(config) => setModalConfig({ ...config, empId: emp.employee, empName: emp.employee_name })}
                     onSendReminder={() => sendReminder(emp.employee)}
                     onSendLeaveReminder={() => sendLeaveReminder(emp.employee)}
+                    projects={data.projects}
                     externalTask={Object.entries(enteredTasks)
                       .filter(([k]) => k.startsWith(emp.employee + '_'))
                       .map(([k, v]) => ({ rowId: parseInt(k.split('_')[1]), ...v }))}
