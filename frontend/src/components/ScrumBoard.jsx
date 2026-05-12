@@ -110,6 +110,18 @@ export default function ScrumBoard({ onLogout }) {
 
   const saveRow = async (key, taskData) => {
       try {
+          if (!taskData) {
+              // Get the saved row name if it exists
+              const existingRowName = enteredTasks[key]?.name
+              if (existingRowName) {
+                  await post('/api/method/erpnext_scrum.erpnext_scrum.api.remove_scrum_entry', {
+                      scrum_name: scrumMeta.name,
+                      row_name: existingRowName
+                  })
+              }
+              return
+          }
+          
           const res = await post('/api/method/erpnext_scrum.erpnext_scrum.api.save_scrum_entry', {
               scrum_name: scrumMeta.name,
               task_data: JSON.stringify(taskData)

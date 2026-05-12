@@ -56,14 +56,16 @@ function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder =
     setOpen(true)
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => fetchTasks(val, isAllTasks, selectedProject), 300)
-    onSelect({ task: null, task_title: val, project: selectedProject || null, is_new_task: true })
+    if (val === '') {
+        onSelect(null)
+    }
   }
 
   const handleSelect = (task) => {
     setSelected(task)
     setQuery(task.subject)
     setOpen(false)
-    onSelect({ task: task.name, task_title: task.subject, project: task.project, is_new_task: false })
+    onSelect({ task: task.name, task_title: task.subject, project: task.project, project_name: task.project_name, task_type: task.type, is_new_task: false })
   }
 
   if (readOnly) {
@@ -141,7 +143,7 @@ function TaskAutocomplete({ employee, onSelect, initialValue = '', placeholder =
                     {task.project && (
                       <div className="text-[10px] text-[var(--text-secondary)] mt-1 flex items-center">
                           <div className="w-1.5 h-1.5 bg-blue-500/50 rounded-full mr-1.5" />
-                          {task.project}
+                          {task.project_name || task.project}
                       </div>
                     )}
                   </div>

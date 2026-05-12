@@ -109,16 +109,17 @@ def get_scrum_data(date=None, department=None):
         
         # Pull from previous scrum if available
         scrum_tasks = frappe.db.sql("""
-            SELECT child.task_title, child.project 
+            SELECT child.task_title, child.project, p.project_name
             FROM `tabScrum Task Entry` child
             JOIN `tabDaily Scrum` parent ON child.parent = parent.name
+            LEFT JOIN `tabProject` p ON child.project = p.name
             WHERE child.employee = %s AND parent.date = %s AND parent.docstatus < 2
             ORDER BY child.creation DESC LIMIT 1
         """, (emp.name, prev_date), as_dict=True)
         
         if scrum_tasks:
             yesterday_task = scrum_tasks[0].task_title
-            yesterday_project = scrum_tasks[0].project
+            yesterday_project = scrum_tasks[0].project_name or scrum_tasks[0].project
             
         timesheet_hours = frappe.db.sql("""
             SELECT SUM(total_hours) FROM `tabTimesheet` 
@@ -149,6 +150,7 @@ def get_scrum_data(date=None, department=None):
                 "task": t.task,
                 "task_title": t.task_title,
                 "project": t.project,
+                "project_name": frappe.db.get_value("Project", t.project, "project_name") if t.project else "",
                 "task_type": t.task_type,
                 "dependencies": t.dependencies,
                 "expected_hours": t.expected_hours,
@@ -158,6 +160,7 @@ def get_scrum_data(date=None, department=None):
                 "task": None,
                 "task_title": "",
                 "project": "",
+                "project_name": "",
                 "task_type": "Development",
                 "dependencies": "No",
                 "expected_hours": 0.0,
@@ -298,6 +301,30 @@ def save_scrum_entry(scrum_name, task_data):
                 frappe.set_user(current_user)
 
     return { "name": scrum.name, "saved_row_name": saved_row_name }
+
+@frappe.whitelist(allow_guest=True)
+def remove_scrum_entry(scrum_name, row_name=None, employee=None, row_id=None):
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
+        
+    scrum = frappe.get_doc("Daily Scrum", scrum_name)
+    if scrum.docstatus == 1:
+        frappe.throw("Cannot update a submitted scrum.")
+        
+    # If we have the specific row name
+    if row_name:
+        for row in scrum.tasks:
+            if row.name == row_name:
+                scrum.remove(row)
+                break
+    elif employee:
+        # Fallback: remove by employee (could be multiple, but we try to find the one matching the frontend logic)
+        # It's better if frontend passes the row_name it got from save_scrum_entry.
+        pass
+        
+    scrum.save(ignore_permissions=True)
+    frappe.db.commit()
+    return True
 
 @frappe.whitelist(allow_guest=True)
 def submit_scrum(scrum_name):
@@ -453,13 +480,15 @@ def get_employee_tasks(employee, search=None, all_tasks=False, project=None):
         params["project"] = project
 
     if search:
-        conditions.append("(t.subject LIKE %(search)s OR t.name LIKE %(search)s)")
+        conditions.append("(t.subject LIKE %(search)s OR t.name LIKE %(search)s OR p.project_name LIKE %(search)s)")
         params["search"] = f"%{search}%"
 
     where_clause = " AND ".join(conditions)
     tasks = frappe.db.sql(f"""
-        SELECT t.name, t.subject, t.project, t.status, t.type
-        FROM `tabTask` t WHERE {where_clause}
+        SELECT t.name, t.subject, t.project, p.project_name, t.status, t.type
+        FROM `tabTask` t
+        LEFT JOIN `tabProject` p ON t.project = p.name
+        WHERE {where_clause}
         ORDER BY t.modified DESC LIMIT 100
     """, params, as_dict=True)
     return tasks

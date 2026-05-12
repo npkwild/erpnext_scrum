@@ -52,8 +52,11 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
   }
 
   const removeRow = (rowId) => {
-    if (readOnly || tasks.length === 1) return
-    setTasks(prev => prev.filter(t => t.id !== rowId))
+    if (readOnly) return
+    updateTask(rowId, null)
+    if (tasks.length > 1) {
+        setTasks(prev => prev.filter(t => t.id !== rowId))
+    }
   }
 
   return (
@@ -153,10 +156,10 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
                     >
                         <Plus className="w-4 h-4" />
                     </button>
-                    {!readOnly && tasks.length > 1 && (
+                    {!readOnly && (
                         <button
                             onClick={() => removeRow(row.id)}
-                            title="Remove entry"
+                            title={tasks.length === 1 ? "Clear entry" : "Remove entry"}
                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
                         >
                             <X className="w-4 h-4" />
@@ -239,8 +242,8 @@ export default function ScrumRow({ emp, onChange, onOpenModal, onSendReminder, o
           <td className="p-4 text-sm text-gray-400 align-middle">
             {row.taskData?.project ? (
               <div className="flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 max-w-fit shadow-sm">
-                  <span className="text-[11px] font-medium truncate" title={row.taskData.project}>
-                    {row.taskData.project}
+                  <span className="text-[11px] font-medium truncate" title={row.taskData.project_name || row.taskData.project}>
+                    {row.taskData.project_name || row.taskData.project}
                   </span>
               </div>
             ) : (
