@@ -99,11 +99,12 @@ export default function ScrumBoard({ onLogout }) {
       [key]: taskData
     }))
 
-    // Auto-save logic if a scrum exists and is draft
-    if (scrumMeta.name && scrumMeta.docstatus === 0) {
+    // Auto-save logic
+    if (scrumMeta.name) {
         clearTimeout(autoSaveTimers.current[key])
         autoSaveTimers.current[key] = setTimeout(() => {
             saveRow(key, taskData)
+            autoSaveTimers.current[key] = null
         }, 1000)
     }
   }
@@ -164,6 +165,16 @@ export default function ScrumBoard({ onLogout }) {
     
     setSaving(true)
     try {
+      // Flush pending auto-saves before submitting
+      const pendingKeys = Object.keys(autoSaveTimers.current)
+      for (const key of pendingKeys) {
+        if (autoSaveTimers.current[key]) {
+           clearTimeout(autoSaveTimers.current[key])
+           await saveRow(key, enteredTasks[key])
+           autoSaveTimers.current[key] = null
+        }
+      }
+
       await post('/api/method/erpnext_scrum.erpnext_scrum.api.submit_scrum', {
         scrum_name: scrumMeta.name
       })
@@ -579,15 +590,15 @@ export default function ScrumBoard({ onLogout }) {
         </div>
 
         <div className="bg-[var(--panel-bg)] border border-[var(--border-color)] rounded-xl overflow-visible shadow-sm">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse table-fixed">
             <thead>
               <tr className="bg-gray-50 text-[var(--text-secondary)] text-[10px] uppercase tracking-wider">
-                <th className="p-4 font-bold w-64 border-b border-[var(--border-color)]">Employee</th>
-                <th className="p-4 font-bold border-b border-[var(--border-color)]">Today's tasks</th>
-                <th className="p-4 font-bold border-b border-[var(--border-color)]">Yesterday's updates</th>
-                <th className="p-4 font-bold border-b border-[var(--border-color)]">TS status</th>
-                <th className="p-4 font-bold border-b border-[var(--border-color)]">Project</th>
-                <th className="p-4 font-bold w-20 border-b border-[var(--border-color)]"></th>
+                <th className="p-4 font-bold w-[18%] border-b border-[var(--border-color)]">Employee</th>
+                <th className="p-4 font-bold w-[30%] border-b border-[var(--border-color)]">Today's tasks</th>
+                <th className="p-4 font-bold w-[20%] border-b border-[var(--border-color)]">Yesterday's updates</th>
+                <th className="p-4 font-bold w-[14%] border-b border-[var(--border-color)]">TS status</th>
+                <th className="p-4 font-bold w-[12%] border-b border-[var(--border-color)]">Project</th>
+                <th className="p-4 font-bold w-[6%] border-b border-[var(--border-color)]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-color)]">

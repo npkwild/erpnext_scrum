@@ -218,7 +218,7 @@ def save_scrum_entry(scrum_name, task_data):
     scrum = frappe.get_doc("Daily Scrum", scrum_name)
     
     if scrum.docstatus == 1:
-        frappe.throw("Cannot update a submitted scrum.")
+        scrum.flags.ignore_validate_update_after_submit = True
 
     found = False
     row_name = task_data.get("name")
@@ -244,6 +244,17 @@ def save_scrum_entry(scrum_name, task_data):
             
             if found:
                 old_task = row.task
+                
+                # If adding a new task to an already submitted scrum
+                if scrum.docstatus == 1 and task_data.get("is_new_task") and not new_task:
+                    new_task_doc = frappe.new_doc("Task")
+                    new_task_doc.subject = new_title
+                    new_task_doc.project = task_data.get("project")
+                    new_task_doc.type = task_data.get("task_type")
+                    new_task_doc.insert(ignore_permissions=True)
+                    new_task = new_task_doc.name
+                    task_data["task"] = new_task
+                    
                 row.task = new_task
                 row.task_title = new_title
                 row.project = task_data.get("project")
@@ -256,6 +267,15 @@ def save_scrum_entry(scrum_name, task_data):
                 break
             
     if not found:
+        # If adding a new task to an already submitted scrum
+        if scrum.docstatus == 1 and task_data.get("is_new_task") and not new_task:
+            new_task_doc = frappe.new_doc("Task")
+            new_task_doc.subject = new_title
+            new_task_doc.project = task_data.get("project")
+            new_task_doc.type = task_data.get("task_type")
+            new_task_doc.insert(ignore_permissions=True)
+            new_task = new_task_doc.name
+            
         new_row = scrum.append("tasks", {
             "employee": employee,
             "task": new_task,
@@ -309,7 +329,7 @@ def remove_scrum_entry(scrum_name, row_name=None, employee=None, row_id=None):
         
     scrum = frappe.get_doc("Daily Scrum", scrum_name)
     if scrum.docstatus == 1:
-        frappe.throw("Cannot update a submitted scrum.")
+        scrum.flags.ignore_validate_update_after_submit = True
         
     # If we have the specific row name
     if row_name:

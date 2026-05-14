@@ -10,7 +10,7 @@
     <script type="module" src="{{ dev_server }}/src/main.jsx"></script>
     {% else %}
     <!-- Production built assets injected here by Frappe hooks or manually -->
-    <script type="module" crossorigin src="/assets/erpnext_scrum/frontend/index.js"></script>
+    <script type="module" crossorigin src="/assets/erpnext_scrum/frontend/index.js?v={{ frappe.utils.now() }}"></script>
     <link rel="stylesheet" href="/assets/erpnext_scrum/frontend/index.css">
     {% endif %}
     
