@@ -604,6 +604,10 @@ def add_task_to_scrum(task, date, employee, team, task_type=None):
             "expected_hours": 0.0,
             "timesheet_status": "Filled"
         })
+        
+        if scrum.docstatus == 1:
+            scrum.flags.ignore_validate_update_after_submit = True
+            
         scrum.save(ignore_permissions=True)
         frappe.db.commit()
         return True
