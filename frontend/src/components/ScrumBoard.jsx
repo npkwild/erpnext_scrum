@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { get, post } from '../utils/api'
-import { Check, Send, AlertCircle, Loader2, Search, Filter, Play, Save, LogOut, X, CheckCircle, Bell, Calendar, Clock } from 'lucide-react'
+import { Check, Send, AlertCircle, Loader2, Search, Filter, Play, Save, LogOut, X, CheckCircle, Bell, Calendar, Clock, ArrowLeft } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import ScrumRow from './ScrumRow'
 import { QuickCreateModal } from './TaskSelector'
 
@@ -417,6 +418,9 @@ export default function ScrumBoard({ onLogout }) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
+              <Link to="/" className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Back to Home">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
               <h1 className="text-4xl font-extrabold tracking-tight text-[var(--text-primary)]">
                 Daily Scrum
               </h1>
