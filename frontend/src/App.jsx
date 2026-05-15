@@ -1,38 +1,33 @@
 import React, { useEffect, useState } from 'react'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import axios from 'axios'
 import ScrumBoard from './components/ScrumBoard'
 import Login from './components/Login'
+import Home from './pages/Home'
+import Dashboard from './pages/Dashboard'
 
 // Configure Axios
-axios.defaults.withCredentials = true // Allow cookies for the login phase
+axios.defaults.withCredentials = true
 
-// Helper to get CSRF token from cookies
 function getCookie(name) {
   let r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
   return r ? r[1] : undefined;
 }
 
-// Global Interceptor to attach tokens
 axios.interceptors.request.use(function (config) {
   const token = localStorage.getItem('frappe_token')
   if (token) {
     config.headers['Authorization'] = `token ${token}`
   }
-
-  // Always attach CSRF token from cookie if available.
-  // In a browser on the same origin, the sid cookie is always sent,
-  // so Frappe will always require a matching X-Frappe-CSRF-Token.
   const csrf_token = getCookie('frappe_csrf_token')
   if (csrf_token) {
     config.headers['X-Frappe-CSRF-Token'] = csrf_token
   }
-
   return config
 }, function (error) {
   return Promise.reject(error)
 })
 
-// Handle Unauthorized responses
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -62,9 +57,16 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-color)]">
-      <ScrumBoard onLogout={handleLogout} />
-    </div>
+    <Router>
+      <div className="min-h-screen bg-[var(--bg-color)]">
+        <Routes>
+          <Route path="/" element={<Home onLogout={handleLogout} />} />
+          <Route path="/scrum" element={<ScrumBoard onLogout={handleLogout} />} />
+          <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </Router>
   )
 }
 
