@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { LayoutDashboard, Users, LogOut, Code } from 'lucide-react'
+import { LayoutDashboard, Users, LogOut, Code, BarChart2 } from 'lucide-react'
 
 export default function Home({ onLogout }) {
   return (
@@ -30,14 +30,14 @@ export default function Home({ onLogout }) {
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-12 flex flex-col items-center justify-center">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl mb-4">
-            Welcome to <span className="text-blue-600">Workspace</span>
+            Elevate Your <span className="text-blue-600">Team's Potential</span>
           </h2>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            Select an application to get started. Manage your daily scrum or view comprehensive department analytics.
+            Your central hub for tracking daily progress, managing tasks, and analyzing team performance.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
           <Link 
             to="/scrum" 
             className="group relative bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 overflow-hidden"
@@ -56,16 +56,32 @@ export default function Home({ onLogout }) {
 
           <Link 
             to="/dashboard" 
-            className="group relative bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-xl hover:indigo-300 transition-all duration-300 overflow-hidden"
+            className="group relative bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all duration-300 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50/20 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform duration-300">
                 <LayoutDashboard className="w-10 h-10" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Admin Dashboard</h3>
               <p className="text-gray-500">
                 View comprehensive reports, employee status, timesheet stats, and metrics.
+              </p>
+            </div>
+          </Link>
+
+          <Link 
+            to="/project-analytics" 
+            className="group relative bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all duration-300 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-50/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                <BarChart2 className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Project Analytics</h3>
+              <p className="text-gray-500">
+                Filter by project to analyze task progress, timesheets, and team contributions.
               </p>
             </div>
           </Link>

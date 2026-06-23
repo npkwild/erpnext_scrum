@@ -5,6 +5,7 @@ import ScrumBoard from './components/ScrumBoard'
 import Login from './components/Login'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
+import ProjectAnalytics from './pages/ProjectAnalytics'
 
 // Configure Axios
 axios.defaults.withCredentials = true
@@ -63,6 +64,7 @@ function App() {
           <Route path="/" element={<Home onLogout={handleLogout} />} />
           <Route path="/scrum" element={<ScrumBoard onLogout={handleLogout} />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
+          <Route path="/project-analytics" element={<ProjectAnalytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
