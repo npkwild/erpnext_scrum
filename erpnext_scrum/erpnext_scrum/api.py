@@ -483,8 +483,10 @@ def send_timesheet_reminders(employees):
         send_individual_reminder(emp_id)
     return True
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_employee_tasks(employee, search=None, all_tasks=False, project=None):
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
     """Get tasks. If all_tasks=True, searches all system tasks."""
     user_id = get_user_id_for_employee(employee)
     
@@ -519,8 +521,9 @@ def get_employee_tasks(employee, search=None, all_tasks=False, project=None):
     """, params, as_dict=True)
     return tasks
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_projects_for_employee(employee):
+    if frappe.session.user == "Guest": frappe.throw("Authentication required", frappe.PermissionError)
     return frappe.get_all("Project", filters={"status": ["!=", "Cancelled"]}, fields=["name", "project_name"], order_by="modified desc", limit=100)
 
 @frappe.whitelist()
@@ -537,8 +540,9 @@ def get_my_api_keys():
     frappe.db.commit()
     return {"api_key": user_doc.api_key, "api_secret": api_secret, "username": user_doc.full_name or user}
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_task_types():
+    if frappe.session.user == "Guest": frappe.throw("Authentication required", frappe.PermissionError)
     return [d.name for d in frappe.get_all("Task Type", order_by="name")]
 
 @frappe.whitelist(allow_guest=True)
@@ -582,7 +586,7 @@ def quick_create_task(subject, project=None, task_type=None, employee=None, exp_
     res["employee"] = employee
     return res
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def add_task_to_scrum(task, date, employee, team, task_type=None):
     if frappe.session.user == "Guest":
         frappe.throw("Authentication required", frappe.PermissionError)
@@ -618,8 +622,9 @@ def add_task_to_scrum(task, date, employee, team, task_type=None):
         frappe.db.commit()
         return True
     return False
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_dashboard_metrics(start_date, end_date, department=None, employee=None, project=None):
+    if frappe.session.user == "Guest": frappe.throw("Authentication required", frappe.PermissionError)
     start_date = getdate(start_date)
     end_date = getdate(end_date)
     
@@ -785,8 +790,10 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
         "employees": result
     }
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def send_report_email(to_email, cc_email=None, message=None):
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
     file = frappe.request.files.get("report_pdf")
     if not file:
         frappe.throw("No report PDF attached")
@@ -808,8 +815,10 @@ def send_report_email(to_email, cc_email=None, message=None):
     )
     return True
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_all_projects():
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
     return frappe.db.sql("""
         SELECT name, project_name, status 
         FROM `tabProject` 
@@ -817,8 +826,10 @@ def get_all_projects():
         ORDER BY status ASC, project_name ASC
     """, as_dict=True)
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_project_analytics(project_name):
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
     if not project_name:
         frappe.throw("Project Name is required")
         

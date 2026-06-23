@@ -82,16 +82,20 @@ export default function Dashboard({ onLogout }) {
 
   const fetchOptions = async () => {
     try {
-      // Basic options fetching, normally through frail APIs but we can just use frappe.client.get_list
+      // Basic options fetching
       const deps = await axios.get('/api/resource/Department?limit=100')
       setDepartments(deps.data.data.map(d => d.name))
+    } catch (e) {
+      console.error('Error fetching departments', e)
+    }
 
+    try {
       const usersRes = await axios.get('/api/method/erpnext_scrum.erpnext_scrum.api.get_active_users');
       if (usersRes.data && usersRes.data.message) {
         setErpUsers(usersRes.data.message);
       }
     } catch (e) {
-      console.error('Error fetching options', e)
+      console.error('Error fetching active users', e)
     }
   }
 
