@@ -39,20 +39,24 @@ def get_scrum_data(date=None, department=None):
     if department:
         existing_scrum = frappe.get_all("Daily Scrum", 
             filters={"date": date, "team": department, "docstatus": ["<", 2]},
-            fields=["name", "status", "docstatus"],
-            limit=1
+            fields=["name", "status", "docstatus", "scrum_master"],
+            limit=1,
+            ignore_permissions=True
         )
     
     scrum_doc = None
     scrum_tasks_map = {}
+    scrum_master_name = None
     if existing_scrum:
         existing_scrum = existing_scrum[0]
-        scrum_doc = frappe.get_doc("Daily Scrum", existing_scrum.name)
-        scrum_doc.flags.ignore_permissions = True
+        scrum_doc = frappe.get_doc("Daily Scrum", existing_scrum.name, ignore_permissions=True)
         for t in scrum_doc.tasks:
             if t.employee not in scrum_tasks_map:
                 scrum_tasks_map[t.employee] = []
             scrum_tasks_map[t.employee].append(t)
+        
+        if existing_scrum.get("scrum_master"):
+            scrum_master_name = frappe.db.get_value("Employee", existing_scrum.scrum_master, "employee_name") or existing_scrum.scrum_master
 
     # Determine which employees to show
     emp_filters = {"status": "Active"}
@@ -169,8 +173,9 @@ def get_scrum_data(date=None, department=None):
             }]
         })
 
-    user = frappe.session.user
-    scrum_master_name = frappe.db.get_value("Employee", {"user_id": user}, "employee_name") or user
+    if not scrum_master_name:
+        user = frappe.session.user
+        scrum_master_name = frappe.db.get_value("Employee", {"user_id": user}, "employee_name") or user
 
     # Fetch projects for default selection
     projects = frappe.get_all("Project", filters={"status": ["!=", "Cancelled"]}, fields=["name", "project_name"], order_by="modified desc", limit=100)
@@ -215,7 +220,7 @@ def save_scrum_entry(scrum_name, task_data):
         frappe.throw("Authentication required", frappe.PermissionError)
         
     task_data = json.loads(task_data)
-    scrum = frappe.get_doc("Daily Scrum", scrum_name)
+    scrum = frappe.get_doc("Daily Scrum", scrum_name, ignore_permissions=True)
     
     if scrum.docstatus == 1:
         scrum.flags.ignore_validate_update_after_submit = True
@@ -328,7 +333,7 @@ def remove_scrum_entry(scrum_name, row_name=None, employee=None, row_id=None):
     if frappe.session.user == "Guest":
         frappe.throw("Authentication required", frappe.PermissionError)
         
-    scrum = frappe.get_doc("Daily Scrum", scrum_name)
+    scrum = frappe.get_doc("Daily Scrum", scrum_name, ignore_permissions=True)
     if scrum.docstatus == 1:
         scrum.flags.ignore_validate_update_after_submit = True
         
@@ -352,7 +357,7 @@ def submit_scrum(scrum_name):
     if frappe.session.user == "Guest":
         frappe.throw("Authentication required", frappe.PermissionError)
         
-    scrum = frappe.get_doc("Daily Scrum", scrum_name)
+    scrum = frappe.get_doc("Daily Scrum", scrum_name, ignore_permissions=True)
     if scrum.docstatus == 0:
         # Create new tasks if marked as is_new_task
         for row in scrum.tasks:
@@ -589,7 +594,7 @@ def add_task_to_scrum(task, date, employee, team, task_type=None):
         # Create a new draft if not found
         scrum_name = start_scrum(date, team)
         
-    scrum = frappe.get_doc("Daily Scrum", scrum_name)
+    scrum = frappe.get_doc("Daily Scrum", scrum_name, ignore_permissions=True)
     
     # Check if employee already has this task in this scrum
     exists = any(t.task == task and t.employee == employee for t in scrum.tasks)
@@ -644,15 +649,17 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
         AND to_date >= %s AND from_date <= %s
     """, (start_date, end_date), as_dict=True)
 
-    # Fetch Timesheets in range
-    # Assuming start_date of timesheet falls in the range
+    # We also need yesterday's TS for the start date.
+    yesterday_date = add_days(start_date, -1)
+    
+    # Fetch Timesheets in range + yesterday
     timesheets = frappe.db.sql("""
         SELECT employee, start_date, SUM(total_hours) as hours
         FROM `tabTimesheet`
         WHERE docstatus = 1
         AND start_date BETWEEN %s AND %s
         GROUP BY employee, start_date
-    """, (start_date, end_date), as_dict=True)
+    """, (yesterday_date, end_date), as_dict=True)
 
     # Fetch Daily Scrum Tasks in range
     scrum_tasks = frappe.db.sql("""
@@ -693,6 +700,7 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
             "image": emp.image,
             "designation": emp.designation,
             "total_ts_hours": 0.0,
+            "yesterday_ts_hours": ts_map[emp.name].get(yesterday_date, 0.0),
             "total_leaves": 0,
             "wfh_days": 0,
             "missed_ts_days": 0,
@@ -776,3 +784,138 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
         "aggregate": aggregate,
         "employees": result
     }
+
+@frappe.whitelist()
+def send_report_email(to_email, cc_email=None, message=None):
+    file = frappe.request.files.get("report_pdf")
+    if not file:
+        frappe.throw("No report PDF attached")
+    
+    file_content = file.read()
+    
+    sender = frappe.session.user
+    
+    frappe.sendmail(
+        recipients=to_email,
+        cc=cc_email,
+        sender=sender,
+        subject="Daily Scrum Status Report",
+        content=message or "Please find the attached Daily Scrum Status Report.",
+        attachments=[{
+            "fname": "Status_Report.pdf",
+            "fcontent": file_content
+        }]
+    )
+    return True
+
+@frappe.whitelist()
+def get_all_projects():
+    return frappe.db.sql("""
+        SELECT name, project_name, status 
+        FROM `tabProject` 
+        WHERE status != 'Cancelled' 
+        ORDER BY status ASC, project_name ASC
+    """, as_dict=True)
+
+@frappe.whitelist()
+def get_project_analytics(project_name):
+    if not project_name:
+        frappe.throw("Project Name is required")
+        
+    project = frappe.db.get_value("Project", project_name, 
+        ["name", "project_name", "status", "percent_complete", "expected_start_date", "expected_end_date", "priority"], 
+        as_dict=True)
+        
+    if not project:
+        frappe.throw("Project not found")
+        
+    # Get all Tasks for this project
+    tasks = frappe.db.sql("""
+        SELECT name, subject, status, exp_start_date, exp_end_date, expected_time, actual_time
+        FROM `tabTask`
+        WHERE project = %s
+    """, (project_name,), as_dict=True)
+    
+    # Timesheets
+    timesheets = frappe.db.sql("""
+        SELECT ts.employee, ts.employee_name, tsd.task, tsd.hours, tsd.billing_hours, ts.start_date
+        FROM `tabTimesheet` ts
+        JOIN `tabTimesheet Detail` tsd ON tsd.parent = ts.name
+        WHERE tsd.project = %s AND ts.docstatus = 1
+    """, (project_name,), as_dict=True)
+    
+    # Process tasks
+    task_stats = {
+        "Total": len(tasks),
+        "Open": 0,
+        "Working": 0,
+        "Completed": 0,
+        "Overdue": 0,
+        "Pending Review": 0
+    }
+    for t in tasks:
+        st = t.status
+        if st in task_stats:
+            task_stats[st] += 1
+        elif st in ["Template", "Cancelled"]:
+            pass
+        else:
+            task_stats["Open"] += 1 # fallback
+            
+    # Process timesheets (Employee Hours)
+    emp_hours = {}
+    total_hours = 0.0
+    for ts in timesheets:
+        emp = ts.employee_name or ts.employee or "Unknown"
+        if emp not in emp_hours:
+            emp_hours[emp] = 0.0
+        emp_hours[emp] += (ts.hours or 0.0)
+        total_hours += (ts.hours or 0.0)
+        
+    # Sort employees by hours descending
+    top_contributors = [{"employee": k, "hours": round(v, 2)} for k, v in emp_hours.items()]
+    top_contributors = sorted(top_contributors, key=lambda x: x["hours"], reverse=True)
+    
+    # Milestones
+    milestones = []
+    if frappe.db.exists("DocType", "Milestone"):
+        try:
+            milestones = frappe.db.sql("""
+                SELECT name, milestone_date, status, subject
+                FROM `tabMilestone`
+                WHERE project = %s
+                ORDER BY milestone_date ASC
+            """, (project_name,), as_dict=True)
+        except Exception:
+            pass
+            
+    # Invoices
+    invoices = []
+    if frappe.db.exists("DocType", "Sales Invoice"):
+        try:
+            invoices = frappe.db.sql("""
+                SELECT name, status, grand_total, outstanding_amount, currency, posting_date
+                FROM `tabSales Invoice`
+                WHERE project = %s AND docstatus = 1
+                ORDER BY posting_date DESC
+            """, (project_name,), as_dict=True)
+        except Exception:
+            pass
+
+    return {
+        "project": project,
+        "tasks": tasks,
+        "task_stats": task_stats,
+        "total_logged_hours": round(total_hours, 2),
+        "contributors": top_contributors,
+        "milestones": milestones,
+        "invoices": invoices
+    }
+
+@frappe.whitelist(allow_guest=True)
+def get_active_users():
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
+    users = frappe.get_all("User", filters={"enabled": 1}, fields=["name", "email", "full_name"], ignore_permissions=True)
+    return [u for u in users if u.email]
+
