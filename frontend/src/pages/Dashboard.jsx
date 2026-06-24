@@ -141,7 +141,7 @@ export default function Dashboard({ onLogout }) {
       const summaryData = [
         ["Present Employees", data.aggregate.present],
         ["Leave Employees", data.aggregate.leave],
-        ["Missed Timesheet (Under 5hr)", data.aggregate.missed_ts],
+        ["Missed Timesheet", period === 'daily' ? data.employees.filter(e => e.yesterday_ts_hours < 1).length : data.aggregate.missed_ts],
         ["Missed Daily Scrum", data.aggregate.missed_scrum],
         ["Work From Home", data.aggregate.wfh]
       ]
@@ -347,7 +347,7 @@ export default function Dashboard({ onLogout }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                 <StatCard title="Present" value={data.aggregate.present} icon={UserCheck} colorClass="text-green-600" bgClass="bg-green-100" />
                 <StatCard title="On Leave" value={data.aggregate.leave} icon={CalendarOff} colorClass="text-orange-600" bgClass="bg-orange-100" />
-                <StatCard title="Missed Timesheet" value={data.aggregate.missed_ts} icon={AlertCircle} colorClass="text-red-600" bgClass="bg-red-100" />
+                <StatCard title="Missed Timesheet" value={data.employees.filter(e => e.yesterday_ts_hours < 1).length} icon={AlertCircle} colorClass="text-red-600" bgClass="bg-red-100" />
                 <StatCard title="Missed Scrum" value={data.aggregate.missed_scrum} icon={Users} colorClass="text-rose-600" bgClass="bg-rose-100" />
                 <StatCard title="Work From Home" value={data.aggregate.wfh} icon={HomeIcon} colorClass="text-blue-600" bgClass="bg-blue-100" />
               </div>
