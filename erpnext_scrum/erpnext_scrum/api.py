@@ -373,6 +373,31 @@ def submit_scrum(scrum_name):
         scrum.submit()
     return scrum.name
 
+def get_sender_for_scrum_master(sm_user=None):
+    """
+    Checks if there is an outgoing Email Account enabled for the Scrum Master (`sm_user`).
+    If an outgoing account exists for sm_user, returns (sender=sm_user, reply_to=sm_user).
+    If no email account exists for sm_user, returns (sender=None, reply_to=sm_user) so Frappe uses the default account.
+    """
+    if not sm_user:
+        sm_user = frappe.session.user
+        
+    if not sm_user or sm_user in ("Administrator", "Guest"):
+        return None, None
+        
+    has_account = frappe.db.exists("Email Account", {
+        "email_id": sm_user,
+        "enable_outgoing": 1
+    }) or frappe.db.exists("Email Account", {
+        "email_account_name": sm_user,
+        "enable_outgoing": 1
+    })
+    
+    if has_account:
+        return sm_user, sm_user
+    else:
+        return None, sm_user
+
 @frappe.whitelist(allow_guest=True)
 def send_individual_reminder(employee):
     if frappe.session.user == "Guest":
@@ -428,12 +453,19 @@ def send_individual_reminder(employee):
         </div>
         """
         
-        frappe.sendmail(
-            recipients=[user_id],
-            subject="URGENT: Timesheet Not Submitted – Immediate Action Required",
-            message=message,
-            delayed=False
-        )
+        sender, reply_to = get_sender_for_scrum_master(sm_user)
+        sendmail_kwargs = {
+            "recipients": [user_id],
+            "subject": "URGENT: Timesheet Not Submitted – Immediate Action Required",
+            "message": message,
+            "delayed": False
+        }
+        if sender:
+            sendmail_kwargs["sender"] = sender
+        if reply_to:
+            sendmail_kwargs["reply_to"] = reply_to
+            
+        frappe.sendmail(**sendmail_kwargs)
         return True
     return False
 
@@ -465,12 +497,19 @@ def send_leave_reminder(employee):
         </div>
         """
         
-        frappe.sendmail(
-            recipients=[user_id],
-            subject="URGENT: Leave Application Missing",
-            message=message,
-            delayed=False
-        )
+        sender, reply_to = get_sender_for_scrum_master(sm_user)
+        sendmail_kwargs = {
+            "recipients": [user_id],
+            "subject": "URGENT: Leave Application Missing",
+            "message": message,
+            "delayed": False
+        }
+        if sender:
+            sendmail_kwargs["sender"] = sender
+        if reply_to:
+            sendmail_kwargs["reply_to"] = reply_to
+            
+        frappe.sendmail(**sendmail_kwargs)
         return True
     return False
 
@@ -826,19 +865,24 @@ def send_report_email(to_email, cc_email=None, message=None):
     
     file_content = file.read()
     
-    sender = frappe.session.user
+    sender, reply_to = get_sender_for_scrum_master(frappe.session.user)
     
-    frappe.sendmail(
-        recipients=to_email,
-        cc=cc_email,
-        sender=sender,
-        subject="Daily Scrum Status Report",
-        content=message or "Please find the attached Daily Scrum Status Report.",
-        attachments=[{
+    sendmail_kwargs = {
+        "recipients": to_email,
+        "cc": cc_email,
+        "subject": "Daily Scrum Status Report",
+        "content": message or "Please find the attached Daily Scrum Status Report.",
+        "attachments": [{
             "fname": "Status_Report.pdf",
             "fcontent": file_content
         }]
-    )
+    }
+    if sender:
+        sendmail_kwargs["sender"] = sender
+    if reply_to:
+        sendmail_kwargs["reply_to"] = reply_to
+        
+    frappe.sendmail(**sendmail_kwargs)
     return True
 
 @frappe.whitelist(allow_guest=True)
