@@ -668,32 +668,14 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
 
     # Fetch Daily Scrum Tasks in range
     scrum_tasks = frappe.db.sql("""
-        SELECT parent.date, parent.scrum_master, child.employee, child.task, child.task_title, child.project, child.task_type, child.timesheet_status, child.expected_hours
+        SELECT parent.date, child.employee, child.task, child.task_title, IFNULL(p.project_name, child.project) as project, child.task_type, child.timesheet_status
         FROM `tabScrum Task Entry` child
         JOIN `tabDaily Scrum` parent ON child.parent = parent.name
+        LEFT JOIN `tabProject` p ON child.project = p.name
         WHERE parent.docstatus < 2
         AND parent.date BETWEEN %s AND %s
+        ORDER BY parent.date DESC, child.idx ASC
     """, (start_date, end_date), as_dict=True)
-
-    scrum_master = None
-    scrum_master_name = None
-    if start_date == end_date:
-        ds_filters = {"date": start_date, "docstatus": ["<", 2]}
-        if department:
-            ds_filters["team"] = department
-        ds_list = frappe.get_all("Daily Scrum", filters=ds_filters, fields=["scrum_master"], limit=1, ignore_permissions=True)
-        if ds_list and ds_list[0].scrum_master:
-            scrum_master = ds_list[0].scrum_master
-            scrum_master_name = frappe.db.get_value("Employee", scrum_master, "employee_name") or scrum_master
-        elif scrum_tasks and scrum_tasks[0].scrum_master:
-            scrum_master = scrum_tasks[0].scrum_master
-            scrum_master_name = frappe.db.get_value("Employee", scrum_master, "employee_name") or scrum_master
-        if not scrum_master:
-            user = frappe.session.user
-            sm_doc = frappe.db.get_value("Employee", {"user_id": user}, ["name", "employee_name"], as_dict=True)
-            if sm_doc:
-                scrum_master = sm_doc.name
-                scrum_master_name = sm_doc.employee_name or sm_doc.name
 
     # Organize data
     from collections import defaultdict
@@ -732,25 +714,8 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
             "missed_scrum_days": 0,
             "attended_tasks": set(),
             "attended_projects": set(),
-            "tasks": []
+            "tasks_list": []
         }
-
-        if start_date == end_date:
-            day_scrum = scrum_map[emp.name].get(start_date, [])
-            emp_tasks = []
-            for st in day_scrum:
-                proj_name = ""
-                if st.project:
-                    proj_name = frappe.db.get_value("Project", st.project, "project_name") or st.project
-                emp_tasks.append({
-                    "task": st.task or "",
-                    "task_title": st.task_title or "",
-                    "project": st.project or "",
-                    "project_name": proj_name,
-                    "task_type": st.task_type or "Development",
-                    "timesheet_status": st.timesheet_status or "Filled"
-                })
-            emp_data["tasks"] = emp_tasks
 
         # Determine leaves and WFH for this employee
         emp_leaves = [l for l in leaves if l.employee == emp.name]
@@ -801,6 +766,29 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
                         emp_data["attended_tasks"].add(task.task)
                     if task.project:
                         emp_data["attended_projects"].add(task.project)
+                    emp_data["tasks_list"].append({
+                        "task": task.task or "",
+                        "task_title": task.task_title or task.task or "",
+                        "project": task.project or "",
+                        "task_type": task.task_type or "Development",
+                        "timesheet_status": task.timesheet_status or ("Filled" if ts_hours > 0 else "Missing"),
+                        "date": str(d)
+                    })
+
+        # If no tasks logged across the period, append a clear status entry for report readability
+        if not emp_data["tasks_list"]:
+            if emp_data["total_leaves"] > 0:
+                emp_data["tasks_list"].append({
+                    "task": "", "task_title": "Leave", "project": "", "task_type": "Leave", "timesheet_status": "On Leave"
+                })
+            elif emp_data["wfh_days"] > 0:
+                emp_data["tasks_list"].append({
+                    "task": "", "task_title": "Work From Home (No task logged)", "project": "", "task_type": "WFH", "timesheet_status": "Filled" if emp_data["total_ts_hours"] > 0 or emp_data["yesterday_ts_hours"] > 0 else "Missing"
+                })
+            else:
+                emp_data["tasks_list"].append({
+                    "task": "", "task_title": "No task logged", "project": "", "task_type": "-", "timesheet_status": "Filled" if emp_data["total_ts_hours"] > 0 or emp_data["yesterday_ts_hours"] > 0 else "Missing"
+                })
 
         # Convert sets to lengths
         emp_data["total_tasks"] = len(emp_data["attended_tasks"])
@@ -825,9 +813,7 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
 
     return {
         "aggregate": aggregate,
-        "employees": result,
-        "scrum_master": scrum_master or "",
-        "scrum_master_name": scrum_master_name or ""
+        "employees": result
     }
 
 @frappe.whitelist(allow_guest=True)

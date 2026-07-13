@@ -120,109 +120,25 @@ export default function Dashboard({ onLogout }) {
   const generatePDFDoc = () => {
     if (!data) return null;
     
-    const isDaily = period === 'daily';
-    const doc = isDaily ? new jsPDF('l', 'mm', 'a4') : new jsPDF();
-    const periodText = `${startDate} to ${endDate}`;
+    const doc = new jsPDF('l', 'mm', 'a4')
+    const periodText = `${startDate} to ${endDate}`
     
-    if (isDaily) {
-      const parts = startDate.split('-');
-      const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : startDate;
-
-      doc.setFontSize(11);
-      doc.setTextColor(100, 116, 139);
-      doc.text("Date:", 14, 20);
-      doc.text("Scrum Master:", 14, 28);
-      doc.text("Team:", 14, 36);
-
-      doc.setTextColor(15, 23, 42);
-      doc.setFont("helvetica", "normal");
-      doc.text(formattedDate, 55, 20);
-      
-      const smDisplay = data.scrum_master 
-        ? (data.scrum_master_name && data.scrum_master_name !== data.scrum_master ? `${data.scrum_master} (${data.scrum_master_name})` : data.scrum_master)
-        : (data.scrum_master_name || "-");
-      doc.text(smDisplay, 55, 28);
-      doc.text(department || "All Departments", 55, 36);
-
-      const tableColumn = ["Sr", "Employee", "Employee Name", "Task", "Task Title", "Project", "Task Type", "Timesheet Status"];
-      const tableRows = [];
-      let sr = 1;
-
-      data.employees.forEach(emp => {
-        if (emp.tasks && emp.tasks.length > 0) {
-          emp.tasks.forEach(taskItem => {
-            tableRows.push([
-              String(sr++),
-              emp.name,
-              emp.employee_name,
-              taskItem.task || "",
-              taskItem.task_title || "-",
-              taskItem.project_name || taskItem.project || "",
-              taskItem.task_type || "Development",
-              taskItem.timesheet_status || "Filled"
-            ]);
-          });
-        } else {
-          let taskTitle = "-";
-          let tsStatus = emp.yesterday_ts_hours >= 1 ? "Filled" : "Missing";
-          if (emp.total_leaves > 0) {
-            taskTitle = "Leave";
-            tsStatus = "On Leave";
-          } else if (emp.wfh_days > 0) {
-            taskTitle = "Work From Home";
-          } else if (emp.yesterday_ts_hours >= 1) {
-            taskTitle = "Present";
-          }
-          tableRows.push([
-            String(sr++),
-            emp.name,
-            emp.employee_name,
-            "",
-            taskTitle,
-            "",
-            "Development",
-            tsStatus
-          ]);
-        }
-      });
-
-      autoTable(doc, {
-        startY: 44,
-        head: [tableColumn],
-        body: tableRows,
-        theme: 'grid',
-        headStyles: { fillColor: [248, 250, 252], textColor: [71, 85, 105], fontStyle: 'bold', lineWidth: 0.1, lineColor: [226, 232, 240] },
-        bodyStyles: { textColor: [30, 41, 59], lineWidth: 0.1, lineColor: [241, 245, 249] },
-        styles: { fontSize: 8.5, cellPadding: 3, overflow: 'linebreak' },
-        columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
-          1: { cellWidth: 26 },
-          2: { cellWidth: 38 },
-          3: { cellWidth: 32 },
-          4: { cellWidth: 'auto' },
-          5: { cellWidth: 36 },
-          6: { cellWidth: 28 },
-          7: { cellWidth: 28 }
-        }
-      });
-
-      return doc;
-    }
-
-    // Header for non-daily reports
-    doc.setFontSize(20)
-    doc.text("Department & Employee Status Report", 14, 22)
-    doc.setFontSize(11)
-    doc.setTextColor(100)
-    doc.text(`Period: ${periodText}`, 14, 30)
-    if (department) doc.text(`Department: ${department}`, 14, 36)
+    // Header
+    doc.setFontSize(18)
+    doc.setTextColor(30, 41, 59)
+    doc.text("Daily Scrum & Employee Status Report", 14, 20)
     
-    let finalY = 48;
+    doc.setFontSize(10)
+    doc.setTextColor(100, 116, 139)
+    doc.text(`Period: ${periodText}`, 14, 28)
+    if (department) doc.text(`Department: ${department}`, 14, 34)
+    
+    let finalY = 42;
     if (period === 'daily') {
       // Aggregate Summary
-      doc.setFontSize(14)
-      doc.setTextColor(0)
-      doc.text("Aggregate Summary", 14, 48)
+      doc.setFontSize(12)
+      doc.setTextColor(30, 41, 59)
+      doc.text("Aggregate Summary", 14, finalY)
       
       const summaryData = [
         ["Present Employees", data.aggregate.present],
@@ -233,44 +149,79 @@ export default function Dashboard({ onLogout }) {
       ]
       
       autoTable(doc, {
-        startY: 52,
+        startY: finalY + 4,
         head: [['Metric', 'Count']],
         body: summaryData,
         theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
+        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8.5, cellPadding: 2.5 },
         margin: { left: 14 },
         tableWidth: 100
       })
-      finalY = doc.lastAutoTable.finalY
+      finalY = doc.lastAutoTable.finalY + 12
     }
 
-    // Detailed Table
-    doc.setFontSize(14)
-    doc.setTextColor(0)
-    doc.text("Employee Details", 14, finalY + 15)
+    // Detailed Table with Tasks & Projects
+    doc.setFontSize(12)
+    doc.setTextColor(30, 41, 59)
+    doc.text("Employee Task & Project Details", 14, finalY)
 
-    const tableColumn = ["Employee", "Dept", "TS Hrs", "Leaves", "WFH", "Missed TS", "Missed Scrum"]
+    const tableColumn = ["Sr", "Employee", "Employee Name", "Task", "Task Title", "Project", "Task Type", "Timesheet Status"]
     const tableRows = []
 
+    let srNo = 1;
     data.employees.forEach(emp => {
-      tableRows.push([
-        emp.employee_name,
-        emp.department,
-        emp.total_ts_hours,
-        emp.total_leaves,
-        emp.wfh_days,
-        emp.missed_ts_days,
-        emp.missed_scrum_days
-      ])
+      const tasks = (emp.tasks_list && emp.tasks_list.length > 0) ? emp.tasks_list : [{
+        task: '',
+        task_title: emp.total_leaves > 0 ? 'Leave' : emp.wfh_days > 0 ? 'Work From Home' : 'No task logged',
+        project: '',
+        task_type: emp.total_leaves > 0 ? 'Leave' : emp.wfh_days > 0 ? 'WFH' : '-',
+        timesheet_status: emp.total_leaves > 0 ? 'On Leave' : (emp.total_ts_hours > 0 || emp.yesterday_ts_hours > 0 ? 'Filled' : 'Missing')
+      }];
+
+      // Deduplicate tasks per employee across the period so exact duplicate tasks aren't repeated every day
+      const uniqueTasksMap = new Map();
+      tasks.forEach(t => {
+        const key = t.task ? t.task : (t.task_title || 'untitled');
+        if (!uniqueTasksMap.has(key)) {
+          uniqueTasksMap.set(key, t);
+        }
+      });
+      const consolidatedTasks = Array.from(uniqueTasksMap.values());
+
+      consolidatedTasks.forEach((t, index) => {
+        const isFirst = (index === 0);
+        tableRows.push([
+          srNo++,
+          isFirst ? emp.name : '',
+          isFirst ? emp.employee_name : '',
+          t.task || '',
+          t.task_title || '',
+          t.project || '',
+          t.task_type || '',
+          t.timesheet_status || ''
+        ]);
+      });
     })
 
     autoTable(doc, {
-      startY: finalY + 20,
+      startY: finalY + 5,
       head: [tableColumn],
       body: tableRows,
-      theme: 'striped',
-      headStyles: { fillColor: [79, 70, 229] },
-      styles: { fontSize: 8 },
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+      styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' }, // Sr
+        1: { cellWidth: 24 }, // Employee ID
+        2: { cellWidth: 40 }, // Employee Name
+        3: { cellWidth: 36 }, // Task ID
+        4: { cellWidth: 'auto' }, // Task Title
+        5: { cellWidth: 32 }, // Project
+        6: { cellWidth: 24 }, // Task Type
+        7: { cellWidth: 18, halign: 'center' } // Timesheet Status
+      },
+      margin: { left: 14, right: 14 }
     })
 
     return doc
@@ -429,28 +380,23 @@ export default function Dashboard({ onLogout }) {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
                     <tr>
+                      <th className="px-6 py-4">Employee</th>
+                      <th className="px-6 py-4">Department</th>
+                      <th className="px-6 py-4">Tasks & Projects</th>
                       {period === 'daily' ? (
                         <>
-                          <th className="px-4 py-3.5 text-center w-12">Sr</th>
-                          <th className="px-4 py-3.5 text-left">Employee</th>
-                          <th className="px-4 py-3.5 text-left">Employee Name</th>
-                          <th className="px-4 py-3.5 text-left">Task</th>
-                          <th className="px-4 py-3.5 text-left">Task Title</th>
-                          <th className="px-4 py-3.5 text-left">Project</th>
-                          <th className="px-4 py-3.5 text-left">Task Type</th>
-                          <th className="px-4 py-3.5 text-center">Timesheet Status</th>
+                          <th className="px-6 py-4 text-center">Yesterday's TS</th>
+                          <th className="px-6 py-4 text-center">Status</th>
                         </>
                       ) : (
                         <>
-                          <th className="px-6 py-4">Employee</th>
-                          <th className="px-6 py-4">Department</th>
                           <th className="px-6 py-4 text-center">Total TS Hours</th>
                           <th className="px-6 py-4 text-center">Leaves</th>
                           <th className="px-6 py-4 text-center">WFH</th>
-                          <th className="px-6 py-4 text-center text-red-600">Missed TS</th>
-                          <th className="px-6 py-4 text-center text-red-600">Missed Scrum</th>
                         </>
                       )}
+                      <th className="px-6 py-4 text-center text-red-600">Missed TS</th>
+                      <th className="px-6 py-4 text-center text-red-600">Missed Scrum</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -472,67 +418,6 @@ export default function Dashboard({ onLogout }) {
                         );
                       }
 
-                      if (period === 'daily') {
-                        let sr = 1;
-                        const rows = [];
-                        filteredEmployees.forEach((emp) => {
-                          if (emp.tasks && emp.tasks.length > 0) {
-                            emp.tasks.forEach((taskItem, idx) => {
-                              rows.push(
-                                <tr key={`${emp.name}-${idx}`} className="hover:bg-gray-50/50 transition-colors text-sm">
-                                  <td className="px-4 py-3.5 text-center font-medium text-gray-500">{sr++}</td>
-                                  <td className="px-4 py-3.5 text-gray-600 font-mono text-xs">{emp.name}</td>
-                                  <td className="px-4 py-3.5 font-medium text-gray-900">{emp.employee_name}</td>
-                                  <td className="px-4 py-3.5 text-gray-600">{taskItem.task || ""}</td>
-                                  <td className="px-4 py-3.5 text-gray-800 font-medium">{taskItem.task_title || "-"}</td>
-                                  <td className="px-4 py-3.5 text-gray-600">{taskItem.project_name || taskItem.project || ""}</td>
-                                  <td className="px-4 py-3.5 text-gray-600">{taskItem.task_type || "Development"}</td>
-                                  <td className="px-4 py-3.5 text-center font-medium">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                      taskItem.timesheet_status === 'On Leave' ? 'bg-orange-100 text-orange-800' :
-                                      taskItem.timesheet_status === 'Missing' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                    }`}>
-                                      {taskItem.timesheet_status || "Filled"}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            });
-                          } else {
-                            let taskTitle = "-";
-                            let tsStatus = emp.yesterday_ts_hours >= 1 ? "Filled" : "Missing";
-                            if (emp.total_leaves > 0) {
-                              taskTitle = "Leave";
-                              tsStatus = "On Leave";
-                            } else if (emp.wfh_days > 0) {
-                              taskTitle = "Work From Home";
-                            } else if (emp.yesterday_ts_hours >= 1) {
-                              taskTitle = "Present";
-                            }
-                            rows.push(
-                              <tr key={emp.name} className="hover:bg-gray-50/50 transition-colors text-sm">
-                                <td className="px-4 py-3.5 text-center font-medium text-gray-500">{sr++}</td>
-                                <td className="px-4 py-3.5 text-gray-600 font-mono text-xs">{emp.name}</td>
-                                <td className="px-4 py-3.5 font-medium text-gray-900">{emp.employee_name}</td>
-                                <td className="px-4 py-3.5 text-gray-600"></td>
-                                <td className="px-4 py-3.5 text-gray-800 font-medium">{taskTitle}</td>
-                                <td className="px-4 py-3.5 text-gray-600"></td>
-                                <td className="px-4 py-3.5 text-gray-600">Development</td>
-                                <td className="px-4 py-3.5 text-center font-medium">
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                    tsStatus === 'On Leave' ? 'bg-orange-100 text-orange-800' :
-                                    tsStatus === 'Missing' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {tsStatus}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          }
-                        });
-                        return rows;
-                      }
-
                       return filteredEmployees.map((emp) => (
                         <tr key={emp.name} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4">
@@ -551,22 +436,80 @@ export default function Dashboard({ onLogout }) {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-gray-600">{emp.department}</td>
-                          <td className="px-6 py-4 text-center font-medium">{emp.total_ts_hours}</td>
-                          <td className="px-6 py-4 text-center">{emp.total_leaves}</td>
-                          <td className="px-6 py-4 text-center">{emp.wfh_days}</td>
+                          <td className="px-6 py-4">
+                            {emp.tasks_list && emp.tasks_list.length > 0 ? (
+                              <div className="space-y-1.5 max-w-md">
+                                {emp.tasks_list.map((t, idx) => (
+                                  <div key={idx} className="flex items-start justify-between bg-gray-50/80 p-2 rounded-lg border border-gray-200 text-xs gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-gray-800 break-words">{t.task_title}</p>
+                                      {t.task && <p className="text-[10px] text-gray-400 font-mono mt-0.5">{t.task}</p>}
+                                    </div>
+                                    {t.project && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-100 text-indigo-700 font-medium whitespace-nowrap text-[10px]">
+                                        {t.project}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs italic">No tasks logged</span>
+                            )}
+                          </td>
+                          {period === 'daily' ? (
+                            <>
+                              <td className="px-6 py-4 text-center font-medium text-gray-500">
+                                {emp.yesterday_ts_hours > 0 ? (
+                                  <span className="text-gray-900">{emp.yesterday_ts_hours}</span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-6 py-4 text-center font-medium">
+                                {emp.total_leaves > 0 ? (
+                                  <span className="text-orange-600">Leave</span>
+                                ) : emp.wfh_days > 0 ? (
+                                  <span className="text-blue-600">WFH</span>
+                                ) : (
+                                  <span className="text-green-600">Present</span>
+                                )}
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-6 py-4 text-center font-medium">{emp.total_ts_hours}</td>
+                              <td className="px-6 py-4 text-center">{emp.total_leaves}</td>
+                              <td className="px-6 py-4 text-center">{emp.wfh_days}</td>
+                            </>
+                          )}
                           <td className="px-6 py-4 text-center">
-                            {emp.missed_ts_days > 0 ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                                {emp.missed_ts_days} days
-                              </span>
-                            ) : '-'}
+                            {period === 'daily' ? (
+                              emp.yesterday_ts_hours >= 1 ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">No</span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Yes</span>
+                              )
+                            ) : (
+                              emp.missed_ts_days > 0 ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                  {emp.missed_ts_days} days
+                                </span>
+                              ) : '-'
+                            )}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            {emp.missed_scrum_days > 0 ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">
-                                {emp.missed_scrum_days} days
-                              </span>
-                            ) : '-'}
+                            {period === 'daily' ? (
+                              emp.missed_scrum_days > 0 ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">Yes</span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">No</span>
+                              )
+                            ) : (
+                              emp.missed_scrum_days > 0 ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">
+                                  {emp.missed_scrum_days} days
+                                </span>
+                              ) : '-'
+                            )}
                           </td>
                         </tr>
                       ));
