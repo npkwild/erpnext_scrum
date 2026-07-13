@@ -120,23 +120,25 @@ export default function Dashboard({ onLogout }) {
   const generatePDFDoc = () => {
     if (!data) return null;
     
-    const doc = new jsPDF()
+    const doc = new jsPDF('l', 'mm', 'a4')
     const periodText = `${startDate} to ${endDate}`
     
     // Header
-    doc.setFontSize(20)
-    doc.text("Department & Employee Status Report", 14, 22)
-    doc.setFontSize(11)
-    doc.setTextColor(100)
-    doc.text(`Period: ${periodText}`, 14, 30)
-    if (department) doc.text(`Department: ${department}`, 14, 36)
+    doc.setFontSize(18)
+    doc.setTextColor(30, 41, 59)
+    doc.text("Daily Scrum & Employee Status Report", 14, 20)
     
-    let finalY = 48;
+    doc.setFontSize(10)
+    doc.setTextColor(100, 116, 139)
+    doc.text(`Period: ${periodText}`, 14, 28)
+    if (department) doc.text(`Department: ${department}`, 14, 34)
+    
+    let finalY = 42;
     if (period === 'daily') {
       // Aggregate Summary
-      doc.setFontSize(14)
-      doc.setTextColor(0)
-      doc.text("Aggregate Summary", 14, 48)
+      doc.setFontSize(12)
+      doc.setTextColor(30, 41, 59)
+      doc.text("Aggregate Summary", 14, finalY)
       
       const summaryData = [
         ["Present Employees", data.aggregate.present],
@@ -147,60 +149,79 @@ export default function Dashboard({ onLogout }) {
       ]
       
       autoTable(doc, {
-        startY: 52,
+        startY: finalY + 4,
         head: [['Metric', 'Count']],
         body: summaryData,
         theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] },
+        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8.5, cellPadding: 2.5 },
         margin: { left: 14 },
         tableWidth: 100
       })
-      finalY = doc.lastAutoTable.finalY
+      finalY = doc.lastAutoTable.finalY + 12
     }
 
-    // Detailed Table
-    doc.setFontSize(14)
-    doc.setTextColor(0)
-    doc.text("Employee Details", 14, finalY + 15)
+    // Detailed Table with Tasks & Projects
+    doc.setFontSize(12)
+    doc.setTextColor(30, 41, 59)
+    doc.text("Employee Task & Project Details", 14, finalY)
 
-    const tableColumn = period === 'daily'
-      ? ["Employee", "Dept", "Y'day TS", "Status", "Missed TS", "Missed Scrum"]
-      : ["Employee", "Dept", "TS Hrs", "Leaves", "WFH", "Missed TS", "Missed Scrum"]
+    const tableColumn = ["Sr", "Employee", "Employee Name", "Task", "Task Title", "Project", "Task Type", "Timesheet Status"]
     const tableRows = []
 
+    let srNo = 1;
     data.employees.forEach(emp => {
-      if (period === 'daily') {
-        const status = emp.total_leaves > 0 ? "Leave" : emp.wfh_days > 0 ? "WFH" : "Present"
-        const missedTS = emp.yesterday_ts_hours >= 1 ? "No" : "Yes"
-        const missedScrum = emp.missed_scrum_days > 0 ? "Yes" : "No"
+      const tasks = (emp.tasks_list && emp.tasks_list.length > 0) ? emp.tasks_list : [{
+        task: '',
+        task_title: emp.total_leaves > 0 ? 'Leave' : emp.wfh_days > 0 ? 'Work From Home' : 'No task logged',
+        project: '',
+        task_type: emp.total_leaves > 0 ? 'Leave' : emp.wfh_days > 0 ? 'WFH' : '-',
+        timesheet_status: emp.total_leaves > 0 ? 'On Leave' : (emp.total_ts_hours > 0 || emp.yesterday_ts_hours > 0 ? 'Filled' : 'Missing')
+      }];
+
+      // Deduplicate tasks per employee across the period so exact duplicate tasks aren't repeated every day
+      const uniqueTasksMap = new Map();
+      tasks.forEach(t => {
+        const key = t.task ? t.task : (t.task_title || 'untitled');
+        if (!uniqueTasksMap.has(key)) {
+          uniqueTasksMap.set(key, t);
+        }
+      });
+      const consolidatedTasks = Array.from(uniqueTasksMap.values());
+
+      consolidatedTasks.forEach((t, index) => {
+        const isFirst = (index === 0);
         tableRows.push([
-          emp.employee_name,
-          emp.department,
-          emp.yesterday_ts_hours > 0 ? `${emp.yesterday_ts_hours} hrs` : '-',
-          status,
-          missedTS,
-          missedScrum
-        ])
-      } else {
-        tableRows.push([
-          emp.employee_name,
-          emp.department,
-          emp.total_ts_hours,
-          emp.total_leaves,
-          emp.wfh_days,
-          emp.missed_ts_days,
-          emp.missed_scrum_days
-        ])
-      }
+          srNo++,
+          isFirst ? emp.name : '',
+          isFirst ? emp.employee_name : '',
+          t.task || '',
+          t.task_title || '',
+          t.project || '',
+          t.task_type || '',
+          t.timesheet_status || ''
+        ]);
+      });
     })
 
     autoTable(doc, {
-      startY: finalY + 20,
+      startY: finalY + 5,
       head: [tableColumn],
       body: tableRows,
-      theme: 'striped',
-      headStyles: { fillColor: [79, 70, 229] },
-      styles: { fontSize: 8 },
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+      styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' }, // Sr
+        1: { cellWidth: 24 }, // Employee ID
+        2: { cellWidth: 40 }, // Employee Name
+        3: { cellWidth: 36 }, // Task ID
+        4: { cellWidth: 'auto' }, // Task Title
+        5: { cellWidth: 32 }, // Project
+        6: { cellWidth: 24 }, // Task Type
+        7: { cellWidth: 18, halign: 'center' } // Timesheet Status
+      },
+      margin: { left: 14, right: 14 }
     })
 
     return doc
@@ -361,6 +382,7 @@ export default function Dashboard({ onLogout }) {
                     <tr>
                       <th className="px-6 py-4">Employee</th>
                       <th className="px-6 py-4">Department</th>
+                      <th className="px-6 py-4">Tasks & Projects</th>
                       {period === 'daily' ? (
                         <>
                           <th className="px-6 py-4 text-center">Yesterday's TS</th>
@@ -389,7 +411,7 @@ export default function Dashboard({ onLogout }) {
                       if (filteredEmployees.length === 0) {
                         return (
                           <tr>
-                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                            <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                               No data found for the selected filters.
                             </td>
                           </tr>
@@ -414,6 +436,27 @@ export default function Dashboard({ onLogout }) {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-gray-600">{emp.department}</td>
+                          <td className="px-6 py-4">
+                            {emp.tasks_list && emp.tasks_list.length > 0 ? (
+                              <div className="space-y-1.5 max-w-md">
+                                {emp.tasks_list.map((t, idx) => (
+                                  <div key={idx} className="flex items-start justify-between bg-gray-50/80 p-2 rounded-lg border border-gray-200 text-xs gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-gray-800 break-words">{t.task_title}</p>
+                                      {t.task && <p className="text-[10px] text-gray-400 font-mono mt-0.5">{t.task}</p>}
+                                    </div>
+                                    {t.project && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-100 text-indigo-700 font-medium whitespace-nowrap text-[10px]">
+                                        {t.project}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs italic">No tasks logged</span>
+                            )}
+                          </td>
                           {period === 'daily' ? (
                             <>
                               <td className="px-6 py-4 text-center font-medium text-gray-500">

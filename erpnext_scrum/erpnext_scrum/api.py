@@ -668,11 +668,13 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
 
     # Fetch Daily Scrum Tasks in range
     scrum_tasks = frappe.db.sql("""
-        SELECT parent.date, child.employee, child.task, child.project
+        SELECT parent.date, child.employee, child.task, child.task_title, IFNULL(p.project_name, child.project) as project, child.task_type, child.timesheet_status
         FROM `tabScrum Task Entry` child
         JOIN `tabDaily Scrum` parent ON child.parent = parent.name
+        LEFT JOIN `tabProject` p ON child.project = p.name
         WHERE parent.docstatus < 2
         AND parent.date BETWEEN %s AND %s
+        ORDER BY parent.date DESC, child.idx ASC
     """, (start_date, end_date), as_dict=True)
 
     # Organize data
@@ -711,7 +713,8 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
             "missed_ts_days": 0,
             "missed_scrum_days": 0,
             "attended_tasks": set(),
-            "attended_projects": set()
+            "attended_projects": set(),
+            "tasks_list": []
         }
 
         # Determine leaves and WFH for this employee
@@ -763,6 +766,29 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
                         emp_data["attended_tasks"].add(task.task)
                     if task.project:
                         emp_data["attended_projects"].add(task.project)
+                    emp_data["tasks_list"].append({
+                        "task": task.task or "",
+                        "task_title": task.task_title or task.task or "",
+                        "project": task.project or "",
+                        "task_type": task.task_type or "Development",
+                        "timesheet_status": task.timesheet_status or ("Filled" if ts_hours > 0 else "Missing"),
+                        "date": str(d)
+                    })
+
+        # If no tasks logged across the period, append a clear status entry for report readability
+        if not emp_data["tasks_list"]:
+            if emp_data["total_leaves"] > 0:
+                emp_data["tasks_list"].append({
+                    "task": "", "task_title": "Leave", "project": "", "task_type": "Leave", "timesheet_status": "On Leave"
+                })
+            elif emp_data["wfh_days"] > 0:
+                emp_data["tasks_list"].append({
+                    "task": "", "task_title": "Work From Home (No task logged)", "project": "", "task_type": "WFH", "timesheet_status": "Filled" if emp_data["total_ts_hours"] > 0 or emp_data["yesterday_ts_hours"] > 0 else "Missing"
+                })
+            else:
+                emp_data["tasks_list"].append({
+                    "task": "", "task_title": "No task logged", "project": "", "task_type": "-", "timesheet_status": "Filled" if emp_data["total_ts_hours"] > 0 or emp_data["yesterday_ts_hours"] > 0 else "Missing"
+                })
 
         # Convert sets to lengths
         emp_data["total_tasks"] = len(emp_data["attended_tasks"])
