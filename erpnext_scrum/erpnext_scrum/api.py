@@ -707,10 +707,11 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
 
     # Fetch Daily Scrum Tasks in range
     scrum_tasks = frappe.db.sql("""
-        SELECT parent.date, child.employee, child.task, child.task_title, IFNULL(p.project_name, child.project) as project, child.task_type, child.timesheet_status
+        SELECT parent.date, child.employee, child.task, child.task_title, IFNULL(p.project_name, child.project) as project, child.task_type, child.timesheet_status, t.expected_time
         FROM `tabScrum Task Entry` child
         JOIN `tabDaily Scrum` parent ON child.parent = parent.name
         LEFT JOIN `tabProject` p ON child.project = p.name
+        LEFT JOIN `tabTask` t ON child.task = t.name
         WHERE parent.docstatus < 2
         AND parent.date BETWEEN %s AND %s
         ORDER BY parent.date DESC, child.idx ASC
@@ -810,6 +811,7 @@ def get_dashboard_metrics(start_date, end_date, department=None, employee=None, 
                         "task_title": task.task_title or task.task or "",
                         "project": task.project or "",
                         "task_type": task.task_type or "Development",
+                        "expected_time": task.expected_time,
                         "timesheet_status": task.timesheet_status or ("Filled" if ts_hours > 0 else "Missing"),
                         "date": str(d)
                     })

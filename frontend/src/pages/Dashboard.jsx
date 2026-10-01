@@ -166,7 +166,7 @@ export default function Dashboard({ onLogout }) {
     doc.setTextColor(30, 41, 59)
     doc.text("Employee Task & Project Details", 14, finalY)
 
-    const tableColumn = ["Sr", "Employee", "Employee Name", "Task", "Task Title", "Project", "Task Type", "Timesheet Status"]
+    const tableColumn = ["Sr", "Employee", "Employee Name", "Task", "Task Title", "Project", "Expected Time (Hrs)", "Timesheet Status"]
     const tableRows = []
 
     let srNo = 1;
@@ -175,7 +175,7 @@ export default function Dashboard({ onLogout }) {
         task: '',
         task_title: emp.total_leaves > 0 ? 'Leave' : emp.wfh_days > 0 ? 'Work From Home' : 'No task logged',
         project: '',
-        task_type: emp.total_leaves > 0 ? 'Leave' : emp.wfh_days > 0 ? 'WFH' : '-',
+        expected_time: null,
         timesheet_status: emp.total_leaves > 0 ? 'On Leave' : (emp.total_ts_hours > 0 || emp.yesterday_ts_hours > 0 ? 'Filled' : 'Missing')
       }];
 
@@ -198,7 +198,7 @@ export default function Dashboard({ onLogout }) {
           t.task || '',
           t.task_title || '',
           t.project || '',
-          t.task_type || '',
+          t.expected_time ? Number(t.expected_time).toFixed(1) : '',
           t.timesheet_status || ''
         ]);
       });
@@ -218,7 +218,7 @@ export default function Dashboard({ onLogout }) {
         3: { cellWidth: 36 }, // Task ID
         4: { cellWidth: 'auto' }, // Task Title
         5: { cellWidth: 32 }, // Project
-        6: { cellWidth: 24 }, // Task Type
+        6: { cellWidth: 24, halign: 'center' }, // Expected Time (Hrs)
         7: { cellWidth: 18, halign: 'center' } // Timesheet Status
       },
       margin: { left: 14, right: 14 }
