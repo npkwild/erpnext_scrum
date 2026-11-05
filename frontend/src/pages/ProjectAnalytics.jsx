@@ -4,6 +4,7 @@ import { ArrowLeft, Briefcase, Clock, Users, CheckCircle, Circle, AlertCircle, P
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getErrorMessage } from '../utils/api';
 
 export default function ProjectAnalytics() {
   const [projects, setProjects] = useState([]);
@@ -228,7 +229,7 @@ export default function ProjectAnalytics() {
       }
     } catch (e) {
       console.error(e);
-      showToast("Failed to send email. Please ensure email service is configured correctly.", "error");
+      showToast(`Failed to send email: ${getErrorMessage(e)}`, "error");
     } finally {
       setIsEmailing(false);
     }
