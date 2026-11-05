@@ -19,6 +19,9 @@ axios.interceptors.request.use(function (config) {
   const token = localStorage.getItem('frappe_token')
   if (token) {
     config.headers['Authorization'] = `token ${token}`
+    // Token auth only: a desk `sid` cookie would make Frappe run its CSRF check
+    // (before token auth) and reject POSTs with CSRFTokenError
+    config.withCredentials = false
   }
   const csrf_token = getCookie('frappe_csrf_token')
   if (csrf_token) {
