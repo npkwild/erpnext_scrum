@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { get, post } from '../utils/api'
+import { get, post, getErrorMessage } from '../utils/api'
 import { Check, Send, AlertCircle, Loader2, Search, Filter, Play, Save, LogOut, X, CheckCircle, Bell, Calendar, Clock, ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import ScrumRow from './ScrumRow'
@@ -194,7 +194,7 @@ export default function ScrumBoard({ onLogout }) {
       })
       showNotification('Timesheet reminder sent!')
     } catch (e) {
-      showNotification('Failed to send reminder', 'error')
+      showNotification(`Failed to send reminder: ${getErrorMessage(e)}`, 'error')
     }
   }
 
@@ -205,7 +205,7 @@ export default function ScrumBoard({ onLogout }) {
       })
       showNotification('Leave reminder sent!')
     } catch (e) {
-      showNotification('Failed to send leave reminder', 'error')
+      showNotification(`Failed to send leave reminder: ${getErrorMessage(e)}`, 'error')
     }
   }
   
@@ -228,7 +228,7 @@ export default function ScrumBoard({ onLogout }) {
         })
         showNotification(`Reminders sent to ${missingEmployees.length} employees!`)
     } catch (e) {
-        showNotification('Failed to send bulk reminders', 'error')
+        showNotification(`Failed to send bulk reminders: ${getErrorMessage(e)}`, 'error')
     }
   }
 
@@ -286,7 +286,7 @@ export default function ScrumBoard({ onLogout }) {
         })
         showNotification(`Timesheet reminders sent to ${employees.length} employees!`)
     } catch (e) {
-        showNotification('Failed to send reminders', 'error')
+        showNotification(`Failed to send reminders: ${getErrorMessage(e)}`, 'error')
     }
   }
 

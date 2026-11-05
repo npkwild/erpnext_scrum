@@ -40,10 +40,38 @@ export const callAPI = async (method, endpoint, body = null, options = {}) => {
       localStorage.removeItem('frappe_token')
       window.location.reload()
     }
-    throw new Error(data.message || data._server_messages || 'API request failed')
+    throw new Error(parseFrappeError(data) || `API request failed (HTTP ${response.status})`)
   }
   
   return data
+}
+
+/**
+ * Extracts the readable error from a Frappe error response body.
+ */
+export const parseFrappeError = (data) => {
+  if (!data) return null
+  try {
+    if (data._server_messages) {
+      return JSON.parse(data._server_messages)
+        .map(m => JSON.parse(m).message)
+        .join(' ')
+        .replace(/<[^>]*>/g, '')
+    }
+  } catch {
+    // fall through to the raw fields below
+  }
+  return data.exception || (typeof data.message === 'string' ? data.message : null)
+}
+
+/**
+ * Readable message for an axios error, a callAPI error, or a client-side exception.
+ */
+export const getErrorMessage = (e) => {
+  if (e?.response) {
+    return parseFrappeError(e.response.data) || `HTTP ${e.response.status}`
+  }
+  return e?.message || 'Unknown error'
 }
 
 export const get = (endpoint, options = {}) => callAPI('GET', endpoint, null, options)

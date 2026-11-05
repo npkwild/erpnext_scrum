@@ -4,6 +4,7 @@ import { ArrowLeft, Download, Filter, Search, UserCheck, Users, CalendarOff, Ale
 import axios from 'axios'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { getErrorMessage } from '../utils/api'
 
 export default function Dashboard({ onLogout }) {
   const [data, setData] = useState(null)
@@ -260,7 +261,7 @@ export default function Dashboard({ onLogout }) {
       }
     } catch (e) {
       console.error(e);
-      showToast("Failed to send email. Please ensure email service is configured correctly.", "error");
+      showToast(`Failed to send email: ${getErrorMessage(e)}`, "error");
     } finally {
       setIsEmailing(false);
     }
